@@ -6,6 +6,7 @@ import { AppLayout } from '@/components/layout/AppLayout'
 import Login from '@/pages/Login'
 import Dashboard from '@/pages/Dashboard'
 import Patients from '@/pages/Patients'
+import Browse from '@/pages/Browse'
 import PatientRegister from '@/pages/PatientRegister'
 import PatientDetails from '@/pages/PatientDetails'
 import Analysis from '@/pages/Analysis'
@@ -22,6 +23,9 @@ export default function App() {
             <Route element={<AppLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/patients" element={<Patients />} />
+              <Route path="/browse" element={<Browse />} />
+              <Route path="/browse/:category" element={<Browse />} />
+              <Route path="/browse/:category/:disease" element={<Browse />} />
               <Route path="/patients/new" element={<PatientRegister />} />
               <Route path="/patients/:id" element={<PatientDetails />} />
               <Route path="/patients/:id/edit" element={<PatientRegister />} />

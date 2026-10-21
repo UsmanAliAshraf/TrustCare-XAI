@@ -2,6 +2,9 @@ import * as React from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Activity, Pencil, FileText, Phone, MapPin, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
+import { BrowsingTrail } from '@/components/BrowsingTrail'
+import { RelatedPatients } from '@/components/RelatedPatients'
+import { DiseaseLink } from '@/components/DiseaseLink'
 import { RiskBadge } from '@/components/RiskBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -20,6 +23,7 @@ import { api } from '@/api/client'
 import { analyzePatient } from '@/api/mockEngine'
 import type { Patient } from '@/api/types'
 import { formatDate, initials } from '@/lib/utils'
+import { categoryOf, categoryPath, diseasePath, pushTrail } from '@/lib/browse'
 import { toast } from 'sonner'
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
@@ -48,11 +52,20 @@ export default function PatientDetails() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [patient, setPatient] = React.useState<Patient | null | undefined>(undefined)
+  const [allPatients, setAllPatients] = React.useState<Patient[] | null>(null)
   const [confirmDelete, setConfirmDelete] = React.useState(false)
 
   React.useEffect(() => {
     if (id) api.getPatient(id).then((p) => setPatient(p ?? null))
   }, [id])
+
+  React.useEffect(() => {
+    api.listPatients().then(setAllPatients)
+  }, [])
+
+  React.useEffect(() => {
+    if (patient) pushTrail({ label: `${patient.firstName} ${patient.lastName}`, to: `/patients/${patient.id}` })
+  }, [patient])
 
   if (patient === undefined) {
     return (
@@ -77,6 +90,7 @@ export default function PatientDetails() {
 
   const risk = analyzePatient(patient).risk
   const fullName = `${patient.firstName} ${patient.lastName}`
+  const category = categoryOf(patient.primaryDisease)
 
   const del = async () => {
     await api.deletePatient(patient.id)
@@ -90,10 +104,18 @@ export default function PatientDetails() {
         title="Patient Details"
         crumbs={[
           { label: 'Home', to: '/dashboard' },
-          { label: 'Patients', to: '/patients' },
+          { label: 'Browse', to: '/browse' },
+          { label: category.name, to: categoryPath(category) },
+          ...(patient.primaryDisease && patient.primaryDisease !== 'None'
+            ? [{ label: patient.primaryDisease, to: diseasePath(patient.primaryDisease) }]
+            : []),
           { label: fullName },
         ]}
       />
+
+      <div className="mb-4">
+        <BrowsingTrail />
+      </div>
 
       {/* Profile header card */}
       <Card className="mb-6">
@@ -120,9 +142,19 @@ export default function PatientDetails() {
                 </span>
               </div>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                <Badge variant="secondary">{patient.primaryDisease}</Badge>
+                {patient.primaryDisease && patient.primaryDisease !== 'None' && (
+                  <Link to={diseasePath(patient.primaryDisease)}>
+                    <Badge variant="secondary" className="hover:bg-primary/15">
+                      {patient.primaryDisease}
+                    </Badge>
+                  </Link>
+                )}
                 {patient.secondaryDisease && patient.secondaryDisease !== 'None' && (
-                  <Badge variant="outline">{patient.secondaryDisease}</Badge>
+                  <Link to={diseasePath(patient.secondaryDisease)}>
+                    <Badge variant="outline" className="hover:border-primary/50">
+                      {patient.secondaryDisease}
+                    </Badge>
+                  </Link>
                 )}
               </div>
             </div>
@@ -158,8 +190,8 @@ export default function PatientDetails() {
         </Group>
 
         <Group title="Medical">
-          <Field label="Primary Disease" value={patient.primaryDisease} />
-          <Field label="Secondary Disease" value={patient.secondaryDisease} />
+          <Field label="Primary Disease" value={<DiseaseLink disease={patient.primaryDisease} className="text-primary" />} />
+          <Field label="Secondary Disease" value={<DiseaseLink disease={patient.secondaryDisease} className="text-primary" />} />
           <Field label="Medication Count" value={patient.medicationCount} />
           <Field label="Missed Appointments" value={patient.missedAppointments} />
           <Field label="Hospitalizations" value={patient.hospitalizations} />
@@ -181,6 +213,8 @@ export default function PatientDetails() {
           <Field label="Financial Difficulty" value={patient.financialDifficulty} />
           <Field label="Family Support" value={patient.familySupport} />
         </Group>
+
+        <RelatedPatients patient={patient} all={allPatients} />
 
         <Card>
           <CardHeader className="pb-2">

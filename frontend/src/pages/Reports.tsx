@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { FileText, Download, Trash2, FileBarChart } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import { RiskBadge } from '@/components/RiskBadge'
+import { DiseaseLink } from '@/components/DiseaseLink'
 import { EmptyState } from '@/components/EmptyState'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -110,7 +111,9 @@ export default function Reports() {
                       </Link>
                       <div className="text-xs text-muted-foreground">{r.id}</div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{r.disease}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      <DiseaseLink disease={r.disease} />
+                    </TableCell>
                     <TableCell>
                       <RiskBadge risk={r.risk} />
                     </TableCell>

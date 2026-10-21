@@ -4,6 +4,7 @@ import { Plus, Search, Users, ChevronLeft, ChevronRight } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import { RiskBadge } from '@/components/RiskBadge'
 import { EmptyState } from '@/components/EmptyState'
+import { DiseaseLink } from '@/components/DiseaseLink'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -154,7 +155,9 @@ export default function Patients() {
                       </TableCell>
                       <TableCell className="text-muted-foreground">{p.age}</TableCell>
                       <TableCell className="text-muted-foreground">{p.gender}</TableCell>
-                      <TableCell className="text-muted-foreground">{p.primaryDisease}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        <DiseaseLink disease={p.primaryDisease} />
+                      </TableCell>
                       <TableCell>
                         <RiskBadge risk={risk} />
                       </TableCell>

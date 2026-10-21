@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard,
   Users,
+  FolderTree,
   Activity,
   FileText,
   Settings,
@@ -15,6 +16,7 @@ import { cn } from '@/lib/utils'
 const NAV = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/patients', label: 'Patients', icon: Users },
+  { to: '/browse', label: 'Browse', icon: FolderTree },
   { to: '/analysis', label: 'Analysis', icon: Activity },
   { to: '/reports', label: 'Reports', icon: FileText },
   { to: '/settings', label: 'Settings', icon: Settings },

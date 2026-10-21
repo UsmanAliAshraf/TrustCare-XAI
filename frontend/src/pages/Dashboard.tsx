@@ -20,6 +20,7 @@ import {
 import { PageHeader } from '@/components/PageHeader'
 import { StatCard } from '@/components/StatCard'
 import { RiskBadge } from '@/components/RiskBadge'
+import { DiseaseLink } from '@/components/DiseaseLink'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -171,7 +172,9 @@ export default function Dashboard() {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{p.age}</TableCell>
-                      <TableCell className="text-muted-foreground">{p.disease}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        <DiseaseLink disease={p.disease} />
+                      </TableCell>
                       <TableCell>
                         <RiskBadge risk={p.risk} />
                       </TableCell>

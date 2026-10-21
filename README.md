@@ -38,6 +38,9 @@ FYP/
 - **Login** (mock auth — any credentials work)
 - **Dashboard** — live stats, risk distribution chart, searchable recent patients
 - **Patients** — searchable / filterable / paginated list, full profile view
+- **Browse by Condition** — structured (hierarchical) browsing of patients by
+  condition category → condition, plus hyperlink browsing via related-patient
+  links and condition anchors. See [IR_MODELS.md](IR_MODELS.md).
 - **Patient registration & editing** — the complete intake form
 - **Adherence Analysis** — loading animation → risk level, probability,
   confidence, SHAP-style explainability bars, circular risk gauge, and
