@@ -14,7 +14,7 @@ from mock_data.patients import PATIENTS
 
 _patients: dict[str, dict] = {p["id"]: copy.deepcopy(p) for p in PATIENTS}
 _reports: dict[str, dict] = {}
-_patient_seq = itertools.count(1021)
+_patient_seq = itertools.count(max(int(p["id"].split("-")[1]) for p in PATIENTS) + 1)
 _report_seq = itertools.count(1)
 
 

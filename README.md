@@ -18,6 +18,9 @@ medications — and understand *why*, through factor-level explanations.
 
 ```
 FYP/
+├── data/              Synthetic patient dataset (shared by frontend + backend)
+│   ├── generate_synthetic_patients.py   seeded generator
+│   └── synthetic_patients.json          120 generated patients
 ├── frontend/          React + TypeScript + Tailwind + shadcn-style UI (Vite)
 │   └── src/
 │       ├── api/           API client, shared types, and the client-side mock engine
@@ -29,9 +32,36 @@ FYP/
     ├── routes/            /dashboard, /patients, /analyze, /reports
     ├── services/          mock analysis engine + in-memory store
     ├── schemas/           Pydantic request/response models
-    ├── mock_data/         ~20 realistic (fake) patients
+    ├── mock_data/         loads data/synthetic_patients.json
     └── main.py
 ```
+
+## Synthetic data
+
+Patient records are not hand-written in the code. They come from a
+**synthetic dataset**, `data/synthetic_patients.json`, which the FastAPI
+backend and the in-browser fallback engine both load.
+
+The dataset is produced by `data/generate_synthetic_patients.py`. Each
+synthetic patient gets a hidden "adherence barrier" level, and risk-related
+attributes (forgetfulness, missed appointments, financial difficulty, family
+support, transport, SMS reminders, ...) are sampled with probabilities that
+rise with it. Diseases depend on age, and comorbidities on the primary
+disease. This keeps the attributes correlated the way they are in real
+adherence data, instead of being independent random values. The default run
+(120 patients, seed 42) gives roughly 20% low, 54% medium and 26% high risk.
+No real people are described: names are random pairings, phone numbers use
+the fictional 555-01xx range, and addresses are invented.
+
+Regenerate it (the same seed always produces the same file):
+
+```bash
+python data/generate_synthetic_patients.py --count 120 --seed 42
+```
+
+The browser caches patients in localStorage under a versioned key. After
+regenerating, clear site data (or bump `LS_PATIENTS` in
+`frontend/src/api/mockEngine.ts`) so the offline mode picks up the new file.
 
 ## Features
 

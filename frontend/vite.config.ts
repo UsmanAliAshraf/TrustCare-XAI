@@ -8,10 +8,14 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      // Shared synthetic dataset at the repository root (also used by the backend).
+      '@data': fileURLToPath(new URL('../data', import.meta.url)),
     },
   },
   server: {
     port: 5173,
+    // Allow serving the shared dataset from outside the frontend folder.
+    fs: { allow: ['..'] },
     proxy: {
       // Forward API calls to the FastAPI mock backend during development.
       '/api': {
