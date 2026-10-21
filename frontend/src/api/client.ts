@@ -14,6 +14,7 @@ import {
   buildDashboard,
   mockStore,
 } from './mockEngine'
+import { QueryError, SEARCH_CONFIG, searchPatients as rankPatients } from '@/lib/search'
 import type {
   AnalysisResult,
   DashboardStats,
@@ -23,8 +24,19 @@ import type {
   ReportInput,
 } from './types'
 
+export { QueryError }
+
 const API_BASE = '/api'
 const TIMEOUT_MS = 2500
+
+// An HTTP error response from the live backend (as opposed to it being down).
+class ApiError extends Error {
+  status: number
+  constructor(status: number, message: string) {
+    super(message)
+    this.status = status
+  }
+}
 
 async function live<T>(path: string, init?: RequestInit): Promise<T> {
   const controller = new AbortController()
@@ -35,7 +47,10 @@ async function live<T>(path: string, init?: RequestInit): Promise<T> {
       signal: controller.signal,
       headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
     })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    if (!res.ok) {
+      const body = await res.json().catch(() => null)
+      throw new ApiError(res.status, typeof body?.detail === 'string' ? body.detail : `HTTP ${res.status}`)
+    }
     if (res.status === 204) return undefined as T
     return (await res.json()) as T
   } finally {
@@ -70,6 +85,23 @@ export const api = {
       () => live<Patient[]>('/patients'),
       () => mockStore.listPatients(),
     )
+  },
+
+  // Ranked fuzzy / Extended Boolean search (see SEARCH_IR.md). Returns patient
+  // records only, most relevant first; throws QueryError for a malformed query.
+  async searchPatients(query: string, limit: number = SEARCH_CONFIG.DEFAULT_LIMIT): Promise<Patient[]> {
+    const params = new URLSearchParams({ q: query, limit: String(limit) })
+    try {
+      return await live<Patient[]>(`/patients/search?${params}`)
+    } catch (err) {
+      // The backend understood the request and rejected the query: report it,
+      // don't retry locally.
+      if (err instanceof ApiError && err.status === 400) throw new QueryError(err.message)
+      if (import.meta.env.DEV) {
+        console.info('[TrustCare] backend unavailable, using local search:', (err as Error).message)
+      }
+      return rankPatients(query, mockStore.listPatients(), limit)
+    }
   },
 
   getPatient(id: string): Promise<Patient | undefined> {

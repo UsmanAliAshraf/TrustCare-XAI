@@ -67,7 +67,9 @@ regenerating, clear site data (or bump `LS_PATIENTS` in
 
 - **Login** (mock auth — any credentials work)
 - **Dashboard** — live stats, risk distribution chart, searchable recent patients
-- **Patients** — searchable / filterable / paginated list, full profile view
+- **Patients** — ranked fuzzy search (names, IDs, diseases, notes, adherence
+  factors, typos, AND / OR / NOT), filterable, paginated list, full profile view.
+  See [SEARCH_IR.md](SEARCH_IR.md).
 - **Browse by Condition** — structured (hierarchical) browsing of patients by
   condition category → condition, plus hyperlink browsing via related-patient
   links and condition anchors. See [IR_MODELS.md](IR_MODELS.md).

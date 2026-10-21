@@ -18,18 +18,24 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { api } from '@/api/client'
+import { api, QueryError } from '@/api/client'
+import { SEARCH_CONFIG } from '@/lib/search'
 import { analyzePatient } from '@/api/mockEngine'
 import type { Patient, RiskLevel } from '@/api/types'
 import { formatDate, initials } from '@/lib/utils'
 
 const PAGE_SIZE = 8
+const SEARCH_DELAY_MS = 250
 
 export default function Patients() {
   const [patients, setPatients] = React.useState<Patient[] | null>(null)
   const [query, setQuery] = React.useState('')
   const [filter, setFilter] = React.useState<'All' | RiskLevel>('All')
   const [page, setPage] = React.useState(1)
+  // Ranked search results for the current query; null when no query is active.
+  const [results, setResults] = React.useState<Patient[] | null>(null)
+  const [searching, setSearching] = React.useState(false)
+  const [queryError, setQueryError] = React.useState<string | null>(null)
   const navigate = useNavigate()
 
   React.useEffect(() => {
@@ -38,19 +44,47 @@ export default function Patients() {
 
   React.useEffect(() => setPage(1), [query, filter])
 
+  // Debounced ranked search; results arrive most relevant first.
+  React.useEffect(() => {
+    const q = query.trim()
+    if (!q) {
+      setResults(null)
+      setQueryError(null)
+      setSearching(false)
+      return
+    }
+    setSearching(true)
+    let cancelled = false
+    const timer = setTimeout(() => {
+      api
+        .searchPatients(q, SEARCH_CONFIG.MAX_LIMIT)
+        .then((found) => {
+          if (cancelled) return
+          setResults(found)
+          setQueryError(null)
+        })
+        .catch((err) => {
+          if (cancelled) return
+          setResults([])
+          setQueryError(err instanceof QueryError ? err.message : 'Search is unavailable right now.')
+        })
+        .finally(() => {
+          if (!cancelled) setSearching(false)
+        })
+    }, SEARCH_DELAY_MS)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [query])
+
   const withRisk = React.useMemo(
-    () => (patients ?? []).map((p) => ({ p, risk: analyzePatient(p).risk })),
-    [patients],
+    () => (results ?? patients ?? []).map((p) => ({ p, risk: analyzePatient(p).risk })),
+    [results, patients],
   )
 
-  const filtered = withRisk.filter(({ p, risk }) => {
-    const q = query.toLowerCase()
-    const matches =
-      `${p.firstName} ${p.lastName}`.toLowerCase().includes(q) ||
-      p.primaryDisease.toLowerCase().includes(q) ||
-      p.id.toLowerCase().includes(q)
-    return matches && (filter === 'All' || risk === filter)
-  })
+  const filtered = withRisk.filter(({ risk }) => filter === 'All' || risk === filter)
+  const loading = !patients || (searching && results === null)
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -73,14 +107,26 @@ export default function Patients() {
       <Card>
         <CardContent className="p-4 sm:p-6">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative max-w-xs flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search by name, ID or disease…"
-                className="pl-9"
-              />
+            <div className="max-w-sm flex-1">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search by name, ID, disease or notes…"
+                  className="pl-9"
+                  aria-describedby="patient-search-help"
+                  aria-invalid={queryError ? true : undefined}
+                  maxLength={SEARCH_CONFIG.MAX_QUERY_LENGTH}
+                />
+              </div>
+              <p
+                id="patient-search-help"
+                className={`mt-1.5 text-xs ${queryError ? 'text-destructive' : 'text-muted-foreground'}`}
+                role={queryError ? 'alert' : undefined}
+              >
+                {queryError ?? 'Combine terms with AND, OR, NOT and ( ), e.g. diabetes AND NOT type 1'}
+              </p>
             </div>
             <div className="flex rounded-lg border p-0.5">
               {(['All', 'Low', 'Medium', 'High'] as const).map((f) => (
@@ -99,7 +145,7 @@ export default function Patients() {
             </div>
           </div>
 
-          {!patients ? (
+          {loading ? (
             <div className="space-y-2">
               {Array.from({ length: 6 }).map((_, i) => (
                 <Skeleton key={i} className="h-14 w-full" />
@@ -108,8 +154,12 @@ export default function Patients() {
           ) : filtered.length === 0 ? (
             <EmptyState
               icon={Users}
-              title="No patients found"
-              description="Try adjusting your search or add a new patient record."
+              title={query.trim() ? 'No matching patients found' : 'No patients found'}
+              description={
+                queryError
+                  ? 'Check the search syntax and try again.'
+                  : 'Try adjusting your search or add a new patient record.'
+              }
               action={
                 <Button asChild>
                   <Link to="/patients/new">
@@ -171,6 +221,7 @@ export default function Patients() {
                 <span>
                   Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of{' '}
                   {filtered.length}
+                  {results && results.length >= SEARCH_CONFIG.MAX_LIMIT && ' top matches. Refine the search to narrow them down'}
                 </span>
                 <div className="flex items-center gap-2">
                   <Button
